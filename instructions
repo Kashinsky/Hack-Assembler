@@ -1,5 +1,6 @@
 # Dillon Yeh
 # Hack Assembly Instructions
+# Segments of values seperated by '"' character lines separate the different values the headers define.
 
 " Predefined Symbols NOTE: Only THESE values are decimal, all other are binary
 SP      0
