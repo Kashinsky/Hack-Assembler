@@ -24,8 +24,10 @@ if(!($file =~ /\.asm$/)) {
 
 #printOptions();
 getInstructions();
-#processFile($file);
+processFile($file);
 
+
+# Gets instructions from the instructions file and adds the values to the appropriate hash.
 sub getInstructions {
 	open(my $FH, "<","instructions") or die "Failed to open instructions file! Is it even there?!\nCroaking...";
 	my $secC = -1;
@@ -33,8 +35,11 @@ sub getInstructions {
 	if($options{d}) {
 		print "\n---Reading instructions---\n";
 	}
+
+    #Iterates through the lines in the instructions file
 	while(<$FH>) {
 		my $line = $_;
+        # Skips 
 		if(substr($line,0,1) eq "#" || $line eq "\n") {
 			if($options{d}) {
 				printf("[%d] SKIPPED: %s",$lno, $line);
@@ -79,24 +84,69 @@ sub getInstructions {
 
 sub processFile {
     my $file = shift;
+    my $ofile = $file;
+    $ofile =~s/\.asm/\.hack/;
+    if($options{d}) {
+        printf ("---PROCESSING %s---\n",$file);
+        printf ("old File %s\n",$file);
+        printf ("new File %s\n",$ofile);
+    }
+    my $lno = 0;
+    open(my $ASM,'<', $file);
+    open(my $HACK,'>',$ofile);
+    while(<$ASM>) {
+        my $line = $_;
+
+        # Removes comments and remaining whitespace and skips the line
+        $line =~ s/\/\/.*//g;
+        $line =~ s/\s*//g;
+        if(!$line) {
+            next;
+        }
+        if($options{d}) {
+            printf("[%03d]: %s\n",$lno ,$line);
+        }
+
+        my @code = "";
+        my $dest = "";
+        my $comp = "";
+        my $jmp = "";
+
+        my @d_cj = split("=",$line);
+        my @c_j;
+        if(!$d_cj[1]) {
+            my @c_j = split(";",$d_cj[0]);
+        
+        }
+        if($d_cj[0]) {
+            $dest = $d_cj[0];
+        }
+        if($c_j[1]) {
+            $jmp = $c_j[1];
+        } else {
+            $comp = $c_j[0];
+        }
+        printf("Code: dest(%s), comp(%s), jmp(%s)\n",$dest,$comp,$jmp);
+        
+        $lno++;
+    }
 
 }
 
 sub printAllCodes {
 	print "\n---Instruction Codes---\n";
 	foreach(keys %reservedLabels) {
-		printf("LABEL: %-10s VALUE: %s\n",$_, $reservedLabels{$_});
+		printf("LABEL: %-8s\t VALUE: %s\n",$_, $reservedLabels{$_});
 	}
 	foreach(keys %compCodes) {
-		printf("LABEL: %-10s VALUE: %s\n",$_, $compCodes{$_});
+		printf("COMP: %-8s\t VALUE: %s\n",$_, $compCodes{$_});
 	}
 	foreach(keys %destCodes) {
-		printf("LABEL: %-10s VALUE: %s\n",$_, $destCodes{$_});
+		printf("DEST: %-8s\t VALUE: %s\n",$_, $destCodes{$_});
 	}
 	foreach(keys %jumpCodes) {
-		printf("LABEL: %-10s VALUE: %s\n",$_, $jumpCodes{$_});
+		printf("JUMPS: %-8s\t VALUE: %s\n",$_, $jumpCodes{$_});
 	}
-
 }
 sub printUsage {
 	print "USAGE: perl assemble.pl [-d][-h] <file.asm>\n";
