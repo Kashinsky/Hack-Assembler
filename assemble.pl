@@ -89,12 +89,14 @@ sub getInstructions {
 	}
 }
 
-# Traverses through the sc file and adds labels and variables to the symbol table
+# Traverses through the src file and adds labels to the symbol table
 sub pass_one {
     my $lno = 0;
+    my $pc = 0;
+    my $varno = 16;
     open(my $SRC, '<', $src);
     if($options{d}) {
-        printf("---First pass through %s---",$src);
+        printf("---First pass through %s---\n",$src);
     }
     while(<$SRC>) {
         my $line = $_;
@@ -102,15 +104,27 @@ sub pass_one {
         $line =~ s/\/\/.*//g;
         $line =~ s/\s*//g;
         if(!$line) {
+            $lno++;
             next;
         }
-        if(substr($line, 0, 1) eq "\@") {
-            
+        if(substr($line, 0, 1) eq "(") {
+            $line =~ s/\(//g;
+            $line =~ s/\)//g;
+            my $val = sprintf("0%015b",$pc);
+            if(exists $symTable{$line}) {
+                print "Pass one error\n";
+                printf("[%03d]: Multiple occurences of label (%s)",$lno,$line);
+            }
+            printf("LABEL %s VALUE %s\n",$line,$val);
+           i# printf("LABEL: %s VALUE: 0%015b\n",$line,$pc);
+           # $symTable{
         }
         if($options{d}) {
-            printf("[%03d]: %s\n",$lno ,$line);
+            printf("[%03d]: PC[%d]: %s\n",$lno,$pc,$line);
         }
+        $pc++;
         $lno++;
+        
     }
 
 }
