@@ -2,29 +2,36 @@
 use strict;
 use Getopt::Std;
 
-# Hack assembler reserved labels
-my %reservedLabels = ();
-# Hack assembler computation codes
-my %compCodes = ();
-# Hack assembler destination codes
-my %destCodes = ();
-# Hack assembler jump codes
-my %jumpCodes = ();
+my %reservedLabels = (); # Hack assembler reserved labels
+my %compCodes = (); # Hack assembler computation codes
+my %destCodes = (); # Hack assembler destination codes
+my %jumpCodes = (); # Hack assembler jump codes
+my %symTable = (); # Symbol Table
+my %options = (); # Command Line Options
 
-# Command Line Options
-my %options = ();
-getopts("dh",\%options) or printUsage();
-if($options{h}) {
-	printUsage();
-}
-my $file = $ARGV[0];
-if(!($file =~ /\.asm$/)) {
-	printUsage();
+my $src;
+my $hack;
+
+{ # Main
+    getArgs();
+    getInstructions();
+    pass_one();
+    # printOptions();
 }
 
-#printOptions();
-getInstructions();
-processFile($file);
+# Gets command line arguments and assigns them the the src, hack, and options fields
+sub getArgs {
+    getopts("dh",\%options) or printUsage();
+    if($options{h}) {
+        printUsage();
+    }
+    $src = $ARGV[0];
+    if(!($src =~ /\.asm$/)) {
+        printUsage();
+    }
+    $hack = $src;
+    $hack =~ s/\.asm$/\.hack/g;
+}
 
 
 # Gets instructions from the instructions file and adds the values to the appropriate hash.
@@ -82,56 +89,82 @@ sub getInstructions {
 	}
 }
 
-sub processFile {
-    my $file = shift;
-    my $ofile = $file;
-    $ofile =~s/\.asm/\.hack/;
-    if($options{d}) {
-        printf ("---PROCESSING %s---\n",$file);
-        printf ("old File %s\n",$file);
-        printf ("new File %s\n",$ofile);
-    }
+# Traverses through the sc file and adds labels and variables to the symbol table
+sub pass_one {
     my $lno = 0;
-    open(my $ASM,'<', $file);
-    open(my $HACK,'>',$ofile);
-    while(<$ASM>) {
+    open(my $SRC, '<', $src);
+    if($options{d}) {
+        printf("---First pass through %s---",$src);
+    }
+    while(<$SRC>) {
         my $line = $_;
-
-        # Removes comments and remaining whitespace and skips the line
+        # Removing comments and useless whitespace
         $line =~ s/\/\/.*//g;
         $line =~ s/\s*//g;
         if(!$line) {
             next;
         }
+        if(substr($line, 0, 1) eq "\@") {
+            
+        }
         if($options{d}) {
             printf("[%03d]: %s\n",$lno ,$line);
         }
-
-        my @code = "";
-        my $dest = "";
-        my $comp = "";
-        my $jmp = "";
-
-        my @d_cj = split("=",$line);
-        my @c_j;
-        if(!$d_cj[1]) {
-            my @c_j = split(";",$d_cj[0]);
-        
-        }
-        if($d_cj[0]) {
-            $dest = $d_cj[0];
-        }
-        if($c_j[1]) {
-            $jmp = $c_j[1];
-        } else {
-            $comp = $c_j[0];
-        }
-        printf("Code: dest(%s), comp(%s), jmp(%s)\n",$dest,$comp,$jmp);
-        
         $lno++;
     }
 
 }
+
+
+#sub processFile {
+#    my $file = shift;
+#    my $ofile = $file;
+#    $ofile =~s/\.asm/\.hack/;
+#    if($options{d}) {
+#        printf ("---PROCESSING %s---\n",$file);
+#        printf ("old File %s\n",$file);
+#        printf ("new File %s\n",$ofile);
+#    }
+#    my $lno = 0;
+#    open(my $ASM,'<', $file);
+#    open(my $HACK,'>',$ofile);
+#    while(<$ASM>) {
+#        my $line = $_;
+#
+#        # Removes comments and remaining whitespace and skips the line
+#        $line =~ s/\/\/.*//g;
+#        $line =~ s/\s*//g;
+#        if(!$line) {
+#            next;
+#        }
+#        if($options{d}) {
+#            #        }
+#
+#        my @code = "";
+#        my $dest = "";
+#        my $comp = "";
+#        my $jmp = "";
+#
+#        my @d_cj = split("=",$line);
+#        my @c_j;
+#        if(!$d_cj[1]) {
+#            my @c_j = split(";",$d_cj[0]);
+#        
+#        }
+#        if($d_cj[0]) {
+#            $dest = $d_cj[0];
+#        }
+#        if($c_j[1]) {
+#            $jmp = $c_j[1];
+#        } else {
+#            $comp = $c_j[0];
+#        }
+#        printf("Code: dest(%s), comp(%s), jmp(%s)\n",$dest,$comp,$jmp);
+#        
+#        $lno++;
+#    }
+#
+#}
 
 sub printAllCodes {
 	print "\n---Instruction Codes---\n";
