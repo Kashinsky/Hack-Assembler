@@ -58,7 +58,6 @@ D&M 1000000
 D|M 1010101
 
 " Dest codes go here
-null    000
 M       001
 D       010
 MD      011
@@ -68,7 +67,6 @@ AD      110
 AMD     111
 
 " Jump codes go here
-null    000
 JGT     001
 JEQ     010
 JGE     011

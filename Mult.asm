@@ -15,7 +15,7 @@ M=D-1
 @total
 M=0
 // Main Loop
-(loop)
+(loop) 
 @i
 D=M
 // Checks if i < 0, Jumps to end if true
