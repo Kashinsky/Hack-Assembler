@@ -1,3 +1,9 @@
+# Name: assemble.pl
+# Date: 10/27/2014
+# Author: Dillon Yeh <yehda194@potsdam.edu>
+# Description: This programs will produce a .hack file that follows the standards
+#              specified by the nand2tetris language specification from a .asm input
+
 #!usr/bin/perl
 use strict;
 use Getopt::Std;
@@ -8,12 +14,13 @@ my %destCodes = (); # Hack assembler destination codes
 my %jumpCodes = (); # Hack assembler jump codes
 my %symTable = (); # Symbol Table
 my %options = (); # Command Line Options
-my $src;
-my $hack;
-my $hackFH;
-my $var = 16;
-my $errStr = "";
-my $errNo = 0;
+my $src; # Source file
+my $hack; # Output hack file
+my $hackFH; # Hack file handle
+my $var = 16; # Value assigned to user assigned variables
+my $errStr = ""; # The error string to be printed
+my $errNo = 0; # The number of errors found in src file
+
 { # Main
     getArgs();
     getInstructions();
@@ -53,12 +60,13 @@ sub getInstructions {
     #Iterates through the lines in the instructions file
 	while(<$FH>) {
 		my $line = $_;
-        # Skips 
+        # Skips over # deliminated comments
 		if(substr($line,0,1) eq "#" || $line eq "\n") {
 			debug(sprintf("[%d] SKIPPED: %s",$lno, $line));
 			$lno++;
 			next;
 		}
+        # Skips over section headers
 		if(substr($line,0,1) eq "\"") {
 			$secC++;
 			debug(sprintf("\n\n---SECTION[%d]---\n[%s]: %s",$secC,$lno, $line));
@@ -88,6 +96,7 @@ sub getInstructions {
 }
 
 # Traverses through the src file and adds labels to the symbol table
+# with the location of the next instruction as a value.
 sub pass_one {
     my $lno = 0;
     my $pc = 0;
@@ -102,13 +111,15 @@ sub pass_one {
             $lno++;
             next;
         }
+        # Checks the current line for the label pattern
         if($line =~ /\(.*\)/) {
             $line =~ s/\(//g;
             $line =~ s/\)//g;
+            # Converts the current program counter to binary uses it as a hash value
             my $val = sprintf("0%015b",$pc);
+            # Compares the label with pre-existing labels 
             if(exists $symTable{$line}) {
-                print "Pass one error\n";
-                printf("[%03d]: Multiple occurences of label (%s)\n",$lno,$line);
+                err(sprintf("[%03d]: Multiple occurences of label (%s)\n",$lno,$line));
             }
             $symTable{$line} = $val;
             debug(sprintf("Adding %s to symbol table\n",$line));
@@ -121,6 +132,7 @@ sub pass_one {
     close $SRC;
 }
 
+# Reads from the src file and calls functions to handle different instruction types
 sub pass_two {
     my $outString = "";
     debug(sprintf ("\n\n---Second pass through %s---\n",$src));
@@ -129,17 +141,20 @@ sub pass_two {
     open(my $SRC,'<',$src);
     while(<$SRC>) {
         my $line = $_;
+        # Comment removal and empty line skipping
         $line =~ s/\/\/.*//g;
         $line =~ s/\s*//g;
         if($line eq "") {
             $lno++;
             next;
         }
+        # Skips lines starting with a label's paren
         if($line =~ /^\(/) {
             $lno++;
             next;
         }
         debug(sprintf ("LINE[%03d] PC[%03d] (%s)\n",$lno,$pc,$line));
+        # Calls A instruction subroutine and appends result to the outString
         if($line =~ /^\@/) {
             $outString .= get_A($line, $lno);
             debug("\n");
@@ -147,6 +162,7 @@ sub pass_two {
             $pc++;
             next;
         }
+        # Appends the C Instruction to the out string
         $outString .= get_C($line, $lno);
         debug("\n");
         $pc++;
@@ -157,6 +173,12 @@ sub pass_two {
     return $outString;
 }
 
+# Returns:
+#   the string containing the binary value associated with the c instruction
+#   or the empty string if the c instruction is invalid
+# Params: 
+#   $line, the potential c instruction
+#   $lno, the current line number in the src file (for debugging)
 sub get_C {
     my $line = shift;
     my $lno = shift;
@@ -164,7 +186,7 @@ sub get_C {
     my $dest = "000";
     my $comp = "";
     my $jmp = "000";
-    my @d_cj = split(/=/,$line);
+    my @d_cj = split(/=/,$line); # The resulting array when line is split by '=' char
     my @c_j;
     if($d_cj[1] ne "") {
         debug(sprintf("Dest \"%s\" Remain \"%s\"\n",$d_cj[0], $d_cj[1]));
@@ -194,6 +216,12 @@ sub get_C {
     return "";
 }
 
+# Returns:
+#   the string containing the binary value associated with the A instruction
+#   or the empty string if the A instruction is invalid
+# Params: 
+#   $line, the potential A instruction
+#   $lno, the current line number in the src file (for debugging)
 sub get_A {
     my $line = shift;
     my $lno = shift;
@@ -228,6 +256,10 @@ sub get_A {
     err(sprintf("Invalid A-instruction \"%s\"\n", $val));
 }
 
+# Returns:
+#   The empty string to indicate that the a instruction contains illegal characters
+#   or the string true to indicate the opposite
+# Param: $val, the string containing to potential a instruction to be tested
 sub match_var {
     my $val = shift;
     if($val =~ /^\d+/) {
@@ -245,6 +277,8 @@ sub match_var {
     return "true";
 }
 
+# Prints message if debug flag is specified
+# Param: $msg, the debug string
 sub debug {
     my $msg = shift;
     if($options{d}) {
@@ -252,11 +286,15 @@ sub debug {
     }
 }
 
+# Appends error string param to $errStr and increments $errNo
+# Param: the error string to be appended to $errStr
 sub err {
     $errStr .= shift;
     $errNo++;
 }
 
+# Prints the contents of the symbol table at the conclusion of the program if
+# the l flag is specified
 sub printSymTable {
     if(!$options{l}) {
         return;
@@ -269,6 +307,7 @@ sub printSymTable {
     print $sts;
 }
 
+# Returns all the intruction codes read from the instruction file
 sub printAllCodes {
 	my $codes = "\n---Instruction Codes---\n";
 	foreach(keys %reservedLabels) {
@@ -286,12 +325,14 @@ sub printAllCodes {
     return $codes;
 }
 
+# Prints the usage of the program then exits with the passed error number
 sub printUsage {
     my $err = shift;
 	print "USAGE: perl assemble.pl [-d][-h][-l] <file.asm>\n";
 	exit $err;
 }
 
+# Print the contents of the options map
 sub printOptions {
 	foreach(keys %options) {
 		printf("Option (%s) => (%s)\n",$_,$options{$_});
